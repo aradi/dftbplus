@@ -11,9 +11,11 @@
 module dftbp_mmapi
   use iso_fortran_env, only : output_unit
   use dftbp_accuracy
+  use dftbp_constants, only : pi
   use dftbp_globalenv
   use dftbp_environment
   use dftbp_mainapi
+  use dftbp_errorfunction
   use dftbp_parser
   use dftbp_hsdutils
   use dftbp_inputdata_module
@@ -29,6 +31,8 @@ module dftbp_mmapi
 
   integer :: nDftbPlusCalc = 0
 
+  !> Maximal argument value of erf, after which it is constant
+  real(dp), parameter :: erfArgLimit = 10.0_dp
 
   type :: TDftbPlusInput
     type(fnode), pointer :: hsdTree => null()
@@ -201,15 +205,16 @@ contains
   end function getMaxAngFromSlakoFile
 
 
-  subroutine getPointChargePotential(coordsMm, chargesMm, coordsQm, extPot, extPotGrad)
+  subroutine getPointChargePotential(coordsMm, chargesMm, coordsQm, extPot, extPotGrad, blurMm)
     real(dp), intent(in) :: coordsMm(:,:)
     real(dp), intent(in) :: chargesMm(:)
     real(dp), intent(in) :: coordsQm(:,:)
     real(dp), intent(out) :: extPot(:)
     real(dp), intent(out) :: extPotGrad(:,:)
+    real(dp), intent(in), optional :: blurMm(:)
 
     real(dp) :: atomPosQm(3), atomPosMm(3)
-    real(dp) :: chargeMm, dist
+    real(dp) :: chargeMm, dist, fTmp, rs
     integer :: nAtomQm, nAtomMm
     integer :: iAtQm, iAtMm
 
@@ -217,29 +222,45 @@ contains
     nAtomMm = size(coordsMm, dim=2)
     extPot(:) = 0.0_dp
     extPotGrad(:,:) = 0.0_dp
+
     do iAtQm = 1, nAtomQm
       atomPosQm(:) = coordsQm(:, iAtQm)
       do iAtMm = 1, nAtomMm
         atomPosMm(:) = coordsMm(1:3, iAtMm)
         chargeMm = chargesMm(iAtMm)
         dist = sqrt(sum((atomPosQm - atomPosMm)**2))
-        extPot(iAtQm) = extPot(iAtQm) + chargeMm / dist
-        extPotGrad(:, iAtQm) = extPotGrad(:, iAtQm) - chargeMm * (atomPosQm - atomPosMm) / dist**3
+        fTmp = 1.0_dp / dist
+        if (present(blurMm)) then
+          if (dist < erfArgLimit * blurMm(iAtMm)) then
+            fTmp = fTmp * erfwrap(dist / blurMm(iAtMm))
+          end if
+        end if
+        extPot(iAtQm) = extPot(iAtQm) + chargeMm * fTmp
+        fTmp = 1.0_dp / dist**3
+        if (present(blurMm)) then
+          if (dist < erfArgLimit * blurMm(iAtMm)) then
+            rs = dist / blurMm(iAtMm)
+            fTmp = fTmp * (erfwrap(rs) - 2.0_dp/(sqrt(pi)*blurMm(iAtMm)) * dist * exp(-(rs**2)))
+          end if
+        end if
+        extPotGrad(:, iAtQm) = extPotGrad(:, iAtQm) - chargeMm * (atomPosQm - atomPosMm) * fTmp
       end do
     end do
 
   end subroutine getPointChargePotential
 
 
-  subroutine getPointChargeGradients(coordsQm, chargesQm, coordsMm, chargesMm, gradients)
+  subroutine getPointChargeGradients(coordsQm, chargesQm, coordsMm, chargesMm, gradients,&
+      & blurMm)
     real(dp), intent(in) :: coordsQm(:,:)
     real(dp), intent(in) :: chargesQm(:)
     real(dp), intent(in) :: coordsMm(:,:)
     real(dp), intent(in) :: chargesMm(:)
     real(dp), intent(out) :: gradients(:,:)
+    real(dp), intent(in), optional :: blurMm(:)
 
     real(dp) :: atomPosQm(3), atomPosMm(3)
-    real(dp) :: chargeQm, chargeMm, dist
+    real(dp) :: chargeQm, chargeMm, dist, fTmp, rs
     integer :: nAtomQm, nAtomMm
     integer :: iAtQm, iAtMm
 
@@ -253,8 +274,15 @@ contains
         atomPosQm(:) = coordsQm(:, iAtQm)
         chargeQm = chargesQm(iAtQm)
         dist = sqrt(sum((atomPosQm - atomPosMm)**2))
+        fTmp = 1.0_dp / dist**3
+        if (present(blurMm)) then
+          if (dist < erfArgLimit * blurMm(iAtMm)) then
+            rs = dist / blurMm(iAtMm)
+            fTmp = fTmp * (erfwrap(rs) - 2.0_dp/(sqrt(pi)*blurMm(iAtMm)) * dist * exp(-(rs**2)))
+          end if
+        end if
         gradients(:, iAtMm) = gradients(:, iAtMm) &
-            & - chargeQm * chargeMm * (atomPosMm - atomPosQm) / dist**3
+            & - chargeQm * chargeMm * (atomPosMm - atomPosQm) * fTmp
       end do
     end do
     

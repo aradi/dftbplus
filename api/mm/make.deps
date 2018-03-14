@@ -8,8 +8,8 @@ hsdapi.o = hsdapi.o $(_mod_dftbp_xmlf90) $(common.fypp) $(_mod_dftbp_hsdparser) 
 _mod_dftbp_hsdapi: hsdapi.o
 _mod_dftbp_hsdapi = $(hsdapi.o)
 
-mmapi.o: _mod_dftbp_environment common.fypp _mod_dftbp_accuracy _mod_iso_fortran_env _mod_dftbp_mainapi _mod_dftbp_inputdata_module _mod_dftbp_parser _mod_dftbp_xmlf90 _mod_dftbp_globalenv _mod_dftbp_hsdutils
-mmapi.o = mmapi.o $(_mod_dftbp_environment) $(common.fypp) $(_mod_dftbp_accuracy) $(_mod_iso_fortran_env) $(_mod_dftbp_mainapi) $(_mod_dftbp_inputdata_module) $(_mod_dftbp_parser) $(_mod_dftbp_xmlf90) $(_mod_dftbp_globalenv) $(_mod_dftbp_hsdutils)
+mmapi.o: _mod_dftbp_environment _mod_dftbp_hsdutils common.fypp _mod_dftbp_accuracy _mod_iso_fortran_env _mod_dftbp_mainapi _mod_dftbp_errorfunction _mod_dftbp_inputdata_module _mod_dftbp_parser _mod_dftbp_xmlf90 _mod_dftbp_globalenv _mod_dftbp_constants
+mmapi.o = mmapi.o $(_mod_dftbp_environment) $(_mod_dftbp_hsdutils) $(common.fypp) $(_mod_dftbp_accuracy) $(_mod_iso_fortran_env) $(_mod_dftbp_mainapi) $(_mod_dftbp_errorfunction) $(_mod_dftbp_inputdata_module) $(_mod_dftbp_parser) $(_mod_dftbp_xmlf90) $(_mod_dftbp_globalenv) $(_mod_dftbp_constants)
 _mod_dftbp_mmapi: mmapi.o
 _mod_dftbp_mmapi = $(mmapi.o)
 
