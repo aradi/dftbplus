@@ -187,7 +187,7 @@ contains
 
 
   !> Sets an external potential.
-  subroutine TDftbPlus_setExternalPotential(this, atomPot, potGrad)
+  subroutine TDftbPlus_setExternalPotential(this, atomPot, shellPot, potGrad)
 
     !> Instance.
     class(TDftbPlus), intent(inout) :: this
@@ -195,10 +195,13 @@ contains
     !> Potential acting on each atom. Shape: (nAtom)
     real(dp), intent(in), optional :: atomPot(:)
 
+    !> Potential acting on each shell of an atom. Shape: (nShells, nAtom)
+    real(dp), intent(in), optional :: shellPot(:,:)
+
     !> Gradient of the potential  on each atom. Shape: (3, nAtom)
     real(dp), intent(in), optional :: potGrad(:,:)
 
-    call setExternalPotential(atomPot, shellPot, potGrad)
+    call setExternalPotential(atomPot, shellPot=shellPot, potGrad=potGrad)
 
   end subroutine TDftbPlus_setExternalPotential
 
