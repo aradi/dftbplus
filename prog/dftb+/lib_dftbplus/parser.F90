@@ -1460,7 +1460,14 @@ contains
       if (.not. ctrl%tReadChrg) then
         call getInitialCharges(node, geo, ctrl%initialCharges)
       end if
-      call getChildValue(node, "SCCTolerance", ctrl%sccTol, 1.0e-5_dp)
+
+      call getChildValue(node, "SCCTolerance", ctrl%sccTol, 1.0e-5_dp, child=child)
+      if (ctrl%sccTol < minSccTol) then
+        write(strTmp, "('Your SCC tolerance (', E11.4, ') was insanely tight. It had been changed&
+            & to a tight but sane value (', E11.4, ')')") ctrl%sccTol, minSccTol
+      call detailedWarning(child, strTmp)
+      ctrl%sccTol = minSccTol
+    end if
 
       ! temporararily removed until debugged
       !call getChildValue(node, "WriteShifts", ctrl%tWriteShifts, .false.)
@@ -1526,6 +1533,8 @@ contains
       if (geo%tPeriodic) then
         call getChildValue(node, "EwaldParameter", ctrl%ewaldAlpha, 0.0_dp)
         call getChildValue(node, "EwaldTolerance", ctrl%tolEwald, 1.0e-9_dp)
+        !call getChildValue(node, "EwaldTolerance", ctrl%tolEwald,&
+        !    & epsilon(1.0_dp)**(2.0_dp / 3.0_dp))
       end if
 
       ctrl%tMulliken = .true.

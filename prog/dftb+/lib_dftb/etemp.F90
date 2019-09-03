@@ -154,7 +154,7 @@ contains
 
     ! Bisection as long as nr. electrons is not accurate enough or next change in the Fermi level
     ! would go below precision
-    do while (abs(nElectrons - nElec) > elecTol &
+    do while (abs(nElectrons - nElec) > elecTolMax &
         & .and. abs(upperEf - lowerEf) >= max(abs(Ef) * epsilon2, epsilon2))
       if ((nElecMax >= nElecMin) .eqv. (nElectrons >= nElec)) then
         lowerEf = Ef
@@ -195,6 +195,7 @@ contains
         end if
       end if
     end if
+
 
     nElec = electronCount(Ef, eigenvals, kT, distrib, kWeight)
     call electronFill(Ebs,filling,TS,E0,Ef,eigenvals,kT,distrib,kWeight)
