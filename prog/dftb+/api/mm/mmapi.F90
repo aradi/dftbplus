@@ -67,10 +67,14 @@ module dftbp_mmapi
     procedure :: setQDepExtPotGen => TDftbPlus_setQDepExtPotGen
     !> obtain the DFTB+ energy
     procedure :: getEnergy => TDftbPlus_getEnergy
+    !> obtain the DFTB+ energy parts repulisve and electronic    
+    procedure :: getEnergyParts => TDftbPlus_getEnergyParts                
     !> obtain the DFTB+ gradients
     procedure :: getGradients => TDftbPlus_getGradients
     !> obtain the DFTB+ stress tensor
     procedure :: getStressTensor => TDftbPlus_getStressTensor
+    !> obtain the DFTB+ Virial tensor
+    procedure :: getVirial => TDftbPlus_getVirial    
     !> obtain the gradients of the external charges
     procedure :: getExtChargeGradients => TDftbPlus_getExtChargeGradients
     !> get the gross (Mulliken) DFTB+ charges
@@ -313,7 +317,21 @@ contains
 
   end subroutine TDftbPlus_getEnergy
 
+  subroutine TDftbPlus_getEnergyParts(this, merminEnergy,repulsiveEnergy,electronicEnergy)
 
+    !> Instance.
+    class(TDftbPlus), intent(inout) :: this
+
+    !> Mermin free energy.
+    real(dp), intent(out) :: merminEnergy
+    real(dp), intent(out) :: repulsiveEnergy
+    real(dp), intent(out) :: electronicEnergy            
+    call this%checkInit()
+
+    call getEnergyParts(this%env,merminEnergy,repulsiveEnergy,electronicEnergy)
+
+  end subroutine TDftbPlus_getEnergyParts
+  
   !> Returns the gradient on the atoms in the system.
   subroutine TDftbPlus_getGradients(this, gradients)
 
@@ -345,6 +363,21 @@ contains
 
   end subroutine TDftbPlus_getStressTensor
 
+  !> Returns the stress of the system.
+  subroutine TDftbPlus_getVirial(this, virial)
+
+    !> Instance.
+    class(TDftbPlus), intent(inout) :: this
+
+    !> Stress of total system
+    real(dp), intent(out) :: virial(:,:)
+
+    call this%checkInit()
+
+    call getVirial(this%env, virial)
+
+  end subroutine TDftbPlus_getVirial
+  
   !> Returns the gradients on the external charges.
   !>
   !> This function may only be called if TDftbPlus_setExternalCharges was called before it
