@@ -118,7 +118,11 @@ contains
       doMpiFinalization_ = .false.
     else
       mpiComm0 = MPI_COMM_WORLD
-      call mpifx_init_thread(requiredThreading=MPI_THREAD_FUNNELED)
+      #:if WITH_OMP
+        call mpifx_init_thread(requiredThreading=MPI_THREAD_FUNNELED)
+      #:else
+        call mpifx_init()
+      #:endif
     end if
 
     call globalMpiComm%init(commid=mpiComm0)
