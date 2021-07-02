@@ -18,7 +18,7 @@ module dftbp_fileid
   integer, parameter :: minId = 20
 
   !> largest ID
-  integer, parameter :: maxId = 65535
+  integer, parameter :: maxId = huge(1)
 
 contains
 

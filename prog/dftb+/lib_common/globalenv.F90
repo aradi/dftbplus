@@ -29,9 +29,9 @@ module dftbp_globalenv
   public :: stdOut, stdErr, tIoProc
   public :: withScalapack, withMpi
   public :: instanceSafeBuild
-  #:if WITH_MPI
-    public :: globalMpiComm
-  #:endif
+#:if WITH_MPI
+  public :: globalMpiComm
+#:endif
 
 
   !> Unredirected standard out
@@ -49,27 +49,30 @@ module dftbp_globalenv
   !> Whether current process is the global lead process
   logical, protected :: tIoProc = .true.
 
-#:if WITH_MPI
-  !> Global MPI communicator (used for aborts)
-  type(mpifx_comm), protected :: globalMpiComm
-#:endif
-
   !> Whether code was compiled with MPI support
   logical, parameter :: withMpi = ${FORTRAN_LOGICAL(WITH_MPI)}$
 
   !> Whether code was compiled with Scalapack
   logical, parameter :: withScalapack = ${FORTRAN_LOGICAL(WITH_SCALAPACK)}$
 
-#:if WITH_MPI
-  !> Whether MPI finalization should be performed at the end
-  logical :: doMpiFinalization = .true.
-#:endif
-
   !> Whether code was compiled with many-body dispersion support
   logical, parameter :: withMbd = ${FORTRAN_LOGICAL(WITH_MBD)}$
 
   !> Whether the code had been built with instance safe components only
   logical, parameter :: instanceSafeBuild = ${FORTRAN_LOGICAL(INSTANCE_SAFE_BUILD)}$
+
+#:if WITH_MPI
+
+  !> Global MPI communicator (used for aborts)
+  type(mpifx_comm), protected :: globalMpiComm
+
+  !> Whether MPI finalization should be performed at the end
+  logical :: doMpiFinalization_ = .true.
+
+  !> Whether stdOut should be closed on exit
+  logical :: closeStdOut_ = .false.
+
+#:endif
 
 
 
@@ -112,7 +115,7 @@ contains
   #:if WITH_MPI
     if (present(mpiComm)) then
       mpiComm0 = mpiComm
-      doMpiFinalization = .false.
+      doMpiFinalization_ = .false.
     else
       mpiComm0 = MPI_COMM_WORLD
       call mpifx_init_thread(requiredThreading=MPI_THREAD_FUNNELED)
@@ -127,6 +130,7 @@ contains
         devNull0 = devNull
       else
         open(newunit=devNull0, file="/dev/null", action="write")
+        closeStdOut_ = .true.
       end if
       stdOut = devNull0
       stdErr = devNull0
@@ -144,8 +148,11 @@ contains
   subroutine destructGlobalEnv()
 
   #:if WITH_MPI
-    if (doMpiFinalization) then
+    if (doMpiFinalization_) then
       call mpifx_finalize()
+    end if
+    if (closeStdOut_) then
+      close(stdOut)
     end if
   #:endif
 
