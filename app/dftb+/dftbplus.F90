@@ -15,6 +15,7 @@ program dftbplus
   use dftbp_dftbplus_inputdata, only : TInputData
   use dftbp_dftbplus_main, only : runDftbPlus
   use dftbp_io_formatout, only : printDftbHeader
+  use dftbplus_initprogram, only : helloWorld
   implicit none
 
   character(len=*), parameter :: releaseName = '${RELEASE}$'
@@ -24,6 +25,7 @@ program dftbplus
   type(TInputData), allocatable :: input
   type(TDftbPlusMain) :: main
 
+  call helloWorld()
   call initGlobalEnv()
   call printDftbHeader(releaseName, releaseYear)
   allocate(input)

@@ -7,6 +7,7 @@ if(NOT BUILD_EXPORTED_TARGETS_ONLY)
 
   set(ALL-SOURCES-F90)
   set(ALL-SOURCES-FPP
+    initprogram.F90
     dftbplus.F90)
 
   dftbp_preprocess("${FYPP}" "${fypp_flags}" "F90" "f90" "${ALL-SOURCES-FPP}"
