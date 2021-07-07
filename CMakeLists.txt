@@ -318,5 +318,5 @@ if(LCOV_REPORT)
   find_program(GENHTML genhtml)
   dftbp_create_lcov_targets("${LCOV}" "${GENHTML}" "${CMAKE_CURRENT_BINARY_DIR}/lcov"
     "${CMAKE_CURRENT_BINARY_DIR}"
-    "${CMAKE_CURRENT_BINARY_DIR}/prog")
+    "${CMAKE_CURRENT_BINARY_DIR}/app;${CMAKE_CURRENT_BINARY_DIR}/src/dftbp")
 endif()
