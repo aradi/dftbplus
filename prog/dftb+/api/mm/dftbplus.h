@@ -163,6 +163,14 @@ void dftbp_get_input_from_file(DftbPlus *instance, const char *filename, DftbPlu
 
 
 /**
+ * Finalizes the input
+ *
+ * \param[inout] input Handler for the input tree
+ */
+void dftbp_input_final(DftbPlusInput *input);
+
+
+/**
  * Sets up the calculator by processing a given input tree.
  *
  * \param[inout] instance Handler of the DFTB+ instance.

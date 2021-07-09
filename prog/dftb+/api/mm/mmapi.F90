@@ -59,6 +59,9 @@ module dftbp_mmapi
   contains
     !> obtain the root of the tree of input
     procedure :: getRootNode => TDftbPlusInput_getRootNode
+    !> Finalization routine
+    final :: TDftbPlusInput_final
+
   end type TDftbPlusInput
 
 
@@ -178,6 +181,17 @@ contains
     call getChild(this%hsdTree, rootTag, root)
 
   end subroutine TDftbPlusInput_getRootNode
+
+
+  !> Finalizes the tree stored in the input
+  subroutine TDftbPlusInput_final(this)
+    type(TDftbPlusInput), intent(inout) :: this
+
+    if (associated(this%hsdTree)) then
+      call destroyNode(this%hsdTree)
+    end if
+
+  end subroutine TDftbPlusInput_final
 
 
   !> Passes the information about the QM region to DFTB+

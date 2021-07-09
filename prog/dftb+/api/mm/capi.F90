@@ -21,17 +21,17 @@ module dftbp_capi
 
   !> DFTB+ atom list structure
   type, bind(C) :: c_DftbPlusAtomList
-    type(c_ptr) :: pDftbPlusAtomList
+    type(c_ptr) :: pDftbPlusAtomList = c_null_ptr
   end type c_DftbPlusAtomList
 
   !> DFTB+ input tree
   type, bind(C) :: c_DftbPlusInput
-    type(c_ptr) :: pDftbPlusInput
+    type(c_ptr) :: pDftbPlusInput = c_null_ptr
   end type c_DftbPlusInput
 
   !> DFTB+ calculation
   type, bind(C) :: c_DftbPlus
-    type(c_ptr) :: instance
+    type(c_ptr) :: instance = c_null_ptr
   end type c_DftbPlus
 
 
@@ -220,6 +220,22 @@ contains
     inputHandler%pDftbPlusInput = c_loc(pDftbPlusInput)
 
   end subroutine c_DftbPlus_getInputFromFile
+
+
+  !> Finalizes the input handler
+  subroutine c_DftbPlus_input_final(inputHandler) bind(C, name='dftbp_input_final')
+
+    !> Handler for the input tree
+    type(c_DftbPlusInput), intent(inout) :: inputHandler
+
+    type(TDftbPlusInput), pointer :: pDftbPlusInput
+
+    if (c_associated(inputHandler%pDftbPlusInput)) then
+      call c_f_pointer(inputHandler%pDftbPlusInput, pDftbPlusInput)
+      deallocate(pDftbPlusInput)
+    end if
+
+  end subroutine c_DftbPlus_input_final
 
 
   !> process a document tree to get settings for the calculation
