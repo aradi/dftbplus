@@ -3024,7 +3024,7 @@ contains
           write(stdOut, "(A,':',T30,A)")    "Casida solver", "Arpack"
        else
           write(stdOut, "(A,':',T30,A,i4)") "Casida solver", &
-          & "Stratmann, SubSpace: ", input%ctrl%lrespini%subSpaceFactorStratmann 
+          & "Stratmann, SubSpace: ", input%ctrl%lrespini%subSpaceFactorStratmann
        end if
     end if
 
@@ -5404,32 +5404,26 @@ contains
     if (.not. tPlumed) then
       return
     end if
-    if (.not. withPlumed) then
-      call error("Code was compiled without PLUMED support")
-    end if
-    if (.not. tMD) then
-      call error("Metadynamics via PLUMED is only possible in MD-simulations")
-    end if
-    allocate(plumedCalc)
-    call TPlumedCalc_init(plumedCalc)
-    call plumedCalc%sendCmdPtr("getApiVersion", apiVersion)
-    if (apiVersion < minApiVersion) then
-      write(strTmp, "(A,I0,A)") "PLUMED interface has not been tested with PLUMED API version < ",&
-          & minApiVersion, ". Your PLUMED library provides API version ", apiVersion, ". Check your&
-          & results carefully and consider to use a more recent PLUMED library if in doubt!"
-      call warning(strTmp)
-    end if
-    call plumedCalc%sendCmdVal("setNatoms", this%nAtom)
-    call plumedCalc%sendCmdVal("setPlumedDat", "plumed.dat")
-    call plumedCalc%sendCmdVal("setNoVirial", 0)
-    call plumedCalc%sendCmdVal("setTimestep", this%deltaT)
-    call plumedCalc%sendCmdVal("setMDEnergyUnits", Hartree__kJ_mol)
-    call plumedCalc%sendCmdVal("setMDLengthUnits", Bohr__nm)
-    call plumedCalc%sendCmdVal("setMDTimeUnits", au__ps)
-    #:if WITH_MPI
-      call plumedCalc%sendCmdVal("setMPIFComm", env%mpi%globalComm%id)
+    #:if WITH_PLUMED
+      if (.not. tMD) then
+        call error("Metadynamics via PLUMED is only possible in MD-simulations")
+      end if
+      allocate(plumedCalc)
+      call TPlumedCalc_init(plumedCalc)
+      call plumedCalc%cmd_val("setNatoms", this%nAtom)
+      call plumedCalc%cmd_val("setPlumedDat", "plumed.dat")
+      call plumedCalc%cmd_val("setNoVirial", 0)
+      call plumedCalc%cmd_val("setTimestep", this%deltaT)
+      call plumedCalc%cmd_val("setMDEnergyUnits", Hartree__kJ_mol)
+      call plumedCalc%cmd_val("setMDLengthUnits", Bohr__nm)
+      call plumedCalc%cmd_val("setMDTimeUnits", au__ps)
+      #:if WITH_MPI
+        call plumedCalc%cmd_val("setMPIFComm", env%mpi%globalComm%id)
+      #:endif
+      call plumedCalc%cmd("init")
+    #:else
+        call error("Code was compiled without PLUMED support")
     #:endif
-    call plumedCalc%sendCmdVal("init", 0)
 
   end subroutine initPlumed
 

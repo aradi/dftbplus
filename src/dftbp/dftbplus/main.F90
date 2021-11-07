@@ -79,7 +79,7 @@ module dftbp_dftbplus_main
   use dftbp_dftbplus_transportio, only : readShifts, writeShifts, writeContactShifts
   use dftbp_elecsolvers_elecsolvers, only : TElectronicSolver
   use dftbp_elecsolvers_elecsolvertypes, only : electronicSolverTypes
-  use dftbp_extlibs_plumed, only : TPlumedCalc, TPlumedCalc_final
+  use dftbp_extlibs_plumed, only : TPlumedCalc
   use dftbp_extlibs_tblite, only : TTBLite
   use dftbp_geoopt_geoopt, only : TGeoOpt, next, reset
   use dftbp_io_message, only : error, warning
@@ -320,7 +320,7 @@ contains
   #:endif
 
     if (allocated(this%plumedCalc)) then
-      call TPlumedCalc_final(this%plumedCalc)
+      deallocate(this%plumedCalc)
     end if
 
     tGeomEnd = this%tMD .or. tGeomEnd .or. this%tDerivs
@@ -1329,9 +1329,11 @@ contains
 
       call env%globalTimer%stopTimer(globalTimers%forceCalc)
 
-      call updateDerivsByPlumed(env, this%plumedCalc, this%nAtom, iGeoStep, this%derivs,&
-          & this%dftbEnergy(this%deltaDftb%iDeterminant)%EMermin, this%coord0, this%mass,&
-          & this%tPeriodic, this%latVec)
+      #:if WITH_PLUMED
+        call updateDerivsByPlumed(env, this%plumedCalc, this%nAtom, iGeoStep, this%derivs,&
+            & this%dftbEnergy(this%deltaDftb%iDeterminant)%EMermin, this%coord0, this%mass,&
+            & this%tPeriodic, this%latVec)
+      #:endif
 
       if (this%tStress) then
         call env%globalTimer%startTimer(globalTimers%stressCalc)
@@ -5773,9 +5775,12 @@ contains
   end subroutine helicalTwistFolded
 
 
+#:if WITH_PLUMED
+
   !> use plumed to update derivatives
   subroutine updateDerivsByPlumed(env, plumedCalc, nAtom, iGeoStep, derivs, energy, coord0, mass,&
       & tPeriodic, latVecs)
+      use iso_c_binding, only : c_loc
 
     !> Environment settings
     type(TEnvironment), intent(in) :: env
@@ -5790,39 +5795,49 @@ contains
     integer, intent(in) :: iGeoStep
 
     !> the derivatives array
-    real(dp), intent(inout), target, contiguous :: derivs(:,:)
+    real(dp), intent(inout), contiguous, target :: derivs(:,:)
 
     !> current energy
     real(dp), intent(in) :: energy
 
     !> current atomic positions
-    real(dp), intent(in), target, contiguous :: coord0(:,:)
+    real(dp), intent(in), contiguous, target :: coord0(:,:)
 
     !> atomic masses array
-    real(dp), intent(in), target, contiguous :: mass(:)
+    real(dp), intent(in), contiguous, target :: mass(:)
 
     !> periodic?
     logical, intent(in) :: tPeriodic
 
     !> lattice vectors
-    real(dp), intent(in), target, contiguous :: latVecs(:,:)
+    real(dp), intent(in), contiguous, target :: latVecs(:,:)
+
+    ! Workaround pointers for Intel
+    real(dp), pointer :: pDerivs(:,:), pCoord0(:,:), pMass(:), pLatVecs(:,:)
+
+    pDerivs => derivs
+    pCoord0 => coord0
+    pMass => mass
+    pLatVecs => latVecs
 
     if (.not. allocated(plumedCalc)) then
       return
     end if
     derivs(:,:) = -derivs
-    call plumedCalc%sendCmdVal("setStep", iGeoStep)
-    call plumedCalc%sendCmdPtr("setForces", derivs)
-    call plumedCalc%sendCmdVal("setEnergy", energy)
-    call plumedCalc%sendCmdPtr("setPositions", coord0)
-    call plumedCalc%sendCmdPtr("setMasses", mass)
+    call plumedCalc%cmd_val("setStep", iGeoStep)
+    call plumedCalc%cmd_ptr("setForces", pDerivs)
+    call plumedCalc%cmd_val("setEnergy", energy)
+    call plumedCalc%cmd_const_ptr("setPositions", pCoord0)
+    call plumedCalc%cmd_const_ptr("setMasses", pMass)
     if (tPeriodic) then
-      call plumedCalc%sendCmdPtr("setBox", latVecs)
+      call plumedCalc%cmd_const_ptr("setBox", pLatVecs)
     end if
-    call plumedCalc%sendCmdVal("calc", 0)
+    call plumedCalc%cmd("calc")
     derivs(:,:) = -derivs
 
   end subroutine updateDerivsByPlumed
+
+#:endif
 
 
   !> Calculates stress tensor and lattice derivatives.

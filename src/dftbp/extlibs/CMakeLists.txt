@@ -34,6 +34,12 @@ if(WITH_GPU)
     ${curdir}/magmac.c)
 endif()
 
+if(WITH_PLUMED)
+  list(APPEND sources-f90
+    ${curdir}/plumed_f08.f90)
+endif()
 
+
+set(ALL-SOURCES-F90 ${ALL-SOURCES-F90} ${sources-f90} PARENT_SCOPE)
 set(ALL-SOURCES-FPP ${ALL-SOURCES-FPP} ${sources-fpp} PARENT_SCOPE)
 set(ALL-SOURCES-C ${ALL-SOURCES-C} ${sources-c} PARENT_SCOPE)
