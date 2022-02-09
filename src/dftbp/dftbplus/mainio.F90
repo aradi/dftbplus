@@ -3743,7 +3743,7 @@ contains
   !> Second group of output data during molecular dynamics
   subroutine writeMdOut2(fd, tStress, tPeriodic, tBarostat, isLinResp, eField, tFixEf,&
       & tPrintMulliken, energy, energiesCasida, latVec, cellVol, cellPressure, pressure, tempIon,&
-      & qOutput, q0, dipoleMoment, solvation)
+      & qOutput, q0, dipoleMoment, solvation, derivs)
 
     !> File ID
     integer, intent(in) :: fd
@@ -3802,7 +3802,10 @@ contains
     !> Instance of the solvation model
     class(TSolvation), intent(in), allocatable :: solvation
 
-    integer :: ii
+    !> Atomic derivatives
+    real(dp), optional, intent(in) :: derivs(:,:)
+
+    integer :: ii, iAt
     character(lc) :: strTmp
 
     if (tStress) then
@@ -3859,6 +3862,11 @@ contains
           write(fd, "(A)")'Warning! Unmodified vacuum dielectric used for dipole moment.'
         end if
       end if
+    end if
+    if (present(derivs)) then
+      do iAt = 1, size(derivs, dim=2)
+        write(fd, "(A, I0, A, 3ES19.10)") "Force on atom #", iAt, " [au]:", -derivs(:, iAt)
+      end do
     end if
 
   end subroutine writeMdOut2
