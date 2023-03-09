@@ -41,6 +41,7 @@ module dftbp_io_tokenreader
     module procedure getNextToken_integerR1
     module procedure getNextToken_real
     module procedure getNextToken_realR1
+    module procedure getNextToken_complex
     module procedure getNextToken_logical
     module procedure getNextToken_logicalR1
   end interface getNextToken
@@ -295,6 +296,86 @@ contains
     end if
 
   end subroutine getNextToken_realR1
+
+
+  !> Returns the next token from the provided string as a real value.
+  subroutine getNextToken_complex(str, tokenValue, start, iostat)
+
+    !> String to parse
+    character(len=*), intent(in) :: str
+
+    !> Contains the value of the token on return
+    complex(dp), intent(out) :: tokenValue
+
+    !> Starting position for the parsing on call, first position after the end of the token on
+    !> return.
+    integer, intent(inout) :: start
+
+    !> Token reader i/o status flag on return
+    integer, intent(out), optional :: iostat
+
+    integer :: iStart, iError, tokStart, tokEnd, tokLen, sepPos
+
+    tokenValue = (0.0_dp, 0.0_dp)
+    iStart = start
+    call getNextToken_local(str, tokStart, tokEnd, tokLen, iStart)
+    processComplexToken: block
+      if (tokLen == 0) then
+        iError = TOKEN_EOS
+        exit processComplexToken
+      end if
+      iError = TOKEN_ERROR
+      if (str(tokStart:tokStart) /= "(") exit processComplexToken
+      if (str(tokEnd:tokEnd) /= ")") exit processComplexToken
+      tokStart = tokStart + 1
+      tokEnd = tokEnd - 1
+      sepPos = findComplexSeparator(str(tokStart:tokEnd)) + tokStart - 1
+      if (sepPos < tokStart) then
+        if (str(tokEnd:tokEnd) == "j") then
+          read(str(tokStart : tokEnd - 1), *, iostat=iError) tokenValue%im
+        else
+          read(str(tokStart : tokEnd), *, iostat=iError) tokenValue%re
+        end if
+        if (iError /= 0) exit processComplexToken
+      else
+        if (str(tokEnd:tokEnd) /= "j") exit processComplexToken
+        read(str(tokStart : sepPos - 1), *, iostat=iError) tokenValue%re
+        if (iError /= 0) exit processComplexToken
+        read(str(sepPos : tokEnd - 1), *, iostat=iError) tokenValue%im
+        if (iError /= 0) exit processComplexToken
+      end if
+      iError = TOKEN_OK
+      start = iStart
+    end block processComplexToken
+    if (present(iostat)) then
+      iostat = iError
+    else if (iError == TOKEN_ERROR) then
+        call error("Real reading error")
+    end if
+
+  contains
+
+    function findComplexSeparator(token) result(pos)
+      character(*), intent(in) :: token
+      integer :: pos
+
+      character :: cur, prev
+      integer :: ii
+
+      pos = 0
+      if (len(token) < 2) return
+      do ii = 2, len(token)
+        prev = token(ii - 1 : ii - 1)
+        cur = token(ii:ii)
+        if ((cur == "+" .or. cur == "-") .and. .not. (prev == "e" .or. prev == "E")) then
+          pos = ii
+          return
+        end if
+      end do
+
+    end function findComplexSeparator
+
+  end subroutine getNextToken_complex
 
 
   !> Returns the next token from the provided string as logical
