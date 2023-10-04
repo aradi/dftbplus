@@ -139,15 +139,17 @@ jobs:
         echo "CMAKE_OPTIONS=${CMAKE_OPTIONS} -DENABLE_DYNAMIC_LOADING=true" >> $GITHUB_ENV
 
     - name: Configure build
-      run: >-
-        cmake -B _build -G Ninja
-        -DCMAKE_INSTALL_PREFIX=${PWD}/_install
-        -DCMAKE_BUILD_TYPE=${{ matrix.config }}
-        ${CMAKE_OPTIONS}
-        -DWITH_MPI=${WITH_MPI}
+      run: |
+        mkdir ${BUILD_DIR}
+        pushd ${BUILD_DIR}
+        cmake -G Ninja -DCMAKE_VERBOSE_MAKEFILE=1 -DCMAKE_INSTALL_PREFIX=${PWD}/_install -DCMAKE_BUILD_TYPE=${{ matrix.config }} ${CMAKE_OPTIONS} -DWITH_MPI=${WITH_MPI} ../
+        popd
 
     - name: Build project
-      run: cmake --build ${BUILD_DIR}
+      run: |
+        pushd ${BUILD_DIR}
+        ninja -v -j1
+        popd
 
     - name: Run regression tests
       run: |
@@ -157,7 +159,9 @@ jobs:
 
     - name: Install project
       run: |
-        cmake --install ${BUILD_DIR}
+        pushd ${BUILD_DIR}
+        ninja install
+        popd
 
     - name: Create gcov reports
       if: contains(matrix.config, 'Coverage')
