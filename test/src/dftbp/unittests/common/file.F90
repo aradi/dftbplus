@@ -5,13 +5,19 @@
 !  See the LICENSE file for terms of usage and distribution.                                       !
 !--------------------------------------------------------------------------------------------------!
 
-#:include "fytest.fypp"
+#:include "fortuno.fypp"
 
-#:block TEST_SUITE("file")
+module test_common_file
   use dftbp_common_file, only : TFileDescr, TOpenOptions, fileExists, openFile, closeFile,&
       & clearFile, defaultBinaryAccess, defaultTextAccess
   use dftbp_io_charmanip, only : tolower
+  use fortuno_serial, only : test => serial_case_item, check => serial_check,&
+      & failed => serial_failed, suite => serial_suite_item, test_item
   implicit none
+
+  private
+  public :: get_tests
+
 
   ! Equality for TOpenOptions instances for easier testing
   interface operator(==)
@@ -23,527 +29,584 @@
     module procedure TOpenOptions_isNotEqual_
   end interface
 
-#:contains
 
-  #:block TEST_FIXTURE("openOptions")
-
+  type :: TOpenOptionsFx
     type(TOpenOptions) :: opts
     integer :: ioStat
     character(:), allocatable :: ioMsg
-
-  #:contains
-
-    #:block TEST("equal")
-      @:ASSERT(opts == TOpenOptions())
-      @:ASSERT(opts /= TOpenOptions(access="stream"))
-      @:ASSERT(opts /= TOpenOptions(action="write"))
-      @:ASSERT(opts /= TOpenOptions(form="unformatted"))
-      @:ASSERT(opts /= TOpenOptions(status="old"))
-      @:ASSERT(opts /= TOpenOptions(position="rewind"))
-    #:endblock
+  end type TOpenOptionsFx
 
 
-    #:block TEST("mode_r")
-      call opts%setMode("r", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="read", form="formatted", position="rewind",&
-          & status="old"))
-    #:endblock
+  type :: TFileDescrFx
+    integer :: lineLength = 10
+    character(10) :: dummyContent(2) = [character(10) :: "1st line", "2nd line"]
+    type(TFileDescr) :: fd
+    integer :: ioStat
+  end type TFileDescrFx
 
 
-    #:block TEST("mode_rt")
+  type :: TFileAccessFx
+    type(TFileDescr) :: fd
+    type(TOpenOptions) :: opts
+    integer :: ioStat
+  end type TFileAccessFx
+
+contains
+
+
+  $:TEST("equal", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    @:ASSERT(fx%opts == TOpenOptions())
+    @:ASSERT(fx%opts /= TOpenOptions(access="stream"))
+    @:ASSERT(fx%opts /= TOpenOptions(action="write"))
+    @:ASSERT(fx%opts /= TOpenOptions(form="unformatted"))
+    @:ASSERT(fx%opts /= TOpenOptions(status="old"))
+    @:ASSERT(fx%opts /= TOpenOptions(position="rewind"))
+  $:END_TEST()
+
+
+  $:TEST("mode_r", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("r", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="read", form="formatted", position="rewind",&
+        & status="old"))
+  $:END_TEST()
+
+
+  $:TEST("mode_rt", label="openOptions", env="openOptions")
+    type(TOpenOptionsFx) :: fx
+    associate (opts => fx%opts, ioStat => fx%iostat, ioMsg => fx%ioMsg)
       call opts%setMode("rt", ioStat, ioMsg)
       @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
       @:ASSERT(opts == TOpenOptions(action="read", form="formatted", position="rewind",&
           & status="old"))
-    #:endblock
+    end associate
+  $:END_TEST()
 
 
-    #:block TEST("mode_rb")
-      call opts%setMode("rb", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="read", form="unformatted", position="rewind",&
-          & status="old"))
-    #:endblock
+  $:TEST("mode_rb", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("rb", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="read", form="unformatted", position="rewind",&
+        & status="old"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_rp")
-      call opts%setMode("r+", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
-          & status="old"))
-    #:endblock
+  $:TEST("mode_rp", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("r+", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
+        & status="old"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_rpt")
-      call opts%setMode("r+t", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
-          & status="old"))
-    #:endblock
+  $:TEST("mode_rpt", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("r+t", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
+        & status="old"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_rpb")
-      call opts%setMode("r+b", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="unformatted", position="rewind",&
-          & status="old"))
-    #:endblock
+  $:TEST("mode_rpb", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("r+b", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="unformatted", position="rewind",&
+        & status="old"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_w")
-      call opts%setMode("w", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="write", form="formatted", position="rewind",&
-          & status="replace"))
-    #:endblock
+  $:TEST("mode_w", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("w", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="write", form="formatted", position="rewind",&
+        & status="replace"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_wt")
-      call opts%setMode("wt", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="write", form="formatted", position="rewind",&
-          & status="replace"))
-    #:endblock
+  $:TEST("mode_wt", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("wt", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="write", form="formatted", position="rewind",&
+        & status="replace"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_wb")
-      call opts%setMode("wb", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="write", form="unformatted", position="rewind",&
-          & status="replace"))
-    #:endblock
+  $:TEST("mode_wb", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("wb", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="write", form="unformatted", position="rewind",&
+        & status="replace"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_wp")
-      call opts%setMode("w+", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
-          & status="replace"))
-    #:endblock
+  $:TEST("mode_wp", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("w+", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
+        & status="replace"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_wpt")
-      call opts%setMode("w+t", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
-          & status="replace"))
-    #:endblock
+  $:TEST("mode_wpt", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("w+t", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="formatted", position="rewind",&
+        & status="replace"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_wpb")
-      call opts%setMode("w+b", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="unformatted", position="rewind",&
-          & status="replace"))
-    #:endblock
+  $:TEST("mode_wpb", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("w+b", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="unformatted", position="rewind",&
+        & status="replace"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_a")
-      call opts%setMode("a", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="write", form="formatted", position="append",&
-          & status="oldnew"))
-    #:endblock
+  $:TEST("mode_a", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("a", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="write", form="formatted", position="append",&
+        & status="oldnew"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_at")
-      call opts%setMode("at", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="write", form="formatted", position="append",&
-          & status="oldnew"))
-    #:endblock
+  $:TEST("mode_at", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("at", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="write", form="formatted", position="append",&
+        & status="oldnew"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_ab")
-      call opts%setMode("ab", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="write", form="unformatted", position="append",&
-          & status="oldnew"))
-    #:endblock
+  $:TEST("mode_ab", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("ab", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="write", form="unformatted", position="append",&
+        & status="oldnew"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_ap")
-      call opts%setMode("a+", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="formatted", position="append",&
-          & status="oldnew"))
-    #:endblock
+  $:TEST("mode_ap", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("a+", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="formatted", position="append",&
+        & status="oldnew"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_apt")
-      call opts%setMode("a+t", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="formatted", position="append",&
-          & status="oldnew"))
-    #:endblock
+  $:TEST("mode_apt", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("a+t", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="formatted", position="append",&
+        & status="oldnew"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_apb")
-      call opts%setMode("a+b", ioStat, ioMsg)
-      @:ASSERT(ioStat == 0 .and. .not. allocated(ioMsg))
-      @:ASSERT(opts == TOpenOptions(action="readwrite", form="unformatted", position="append",&
-          & status="oldnew"))
-    #:endblock
+  $:TEST("mode_apb", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("a+b", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == 0 .and. .not. allocated(fx%ioMsg))
+    @:ASSERT(fx%opts == TOpenOptions(action="readwrite", form="unformatted", position="append",&
+        & status="oldnew"))
+  $:END_TEST()
 
 
-    #:block TEST("mode_invalid_action1")
-      call opts%setMode("g", ioStat, ioMsg)
-      @:ASSERT(ioStat == -1 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:14) == "Invalid action")
-    #:endblock
+  $:TEST("mode_invalid_action1", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("g", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -1 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:14) == "Invalid action")
+  $:END_TEST()
 
 
-    #:block TEST("mode_invalid_action2")
-      call opts%setMode("gt", ioStat, ioMsg)
-      @:ASSERT(ioStat == -1 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:14) == "Invalid action")
-    #:endblock
+  $:TEST("mode_invalid_action2", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("gt", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -1 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:14) == "Invalid action")
+  $:END_TEST()
 
 
-    #:block TEST("mode_invalid_action3")
-      call opts%setMode("g+t", ioStat, ioMsg)
-      @:ASSERT(ioStat == -1 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:14) == "Invalid action")
-    #:endblock
+  $:TEST("mode_invalid_action3", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("g+t", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -1 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:14) == "Invalid action")
+  $:END_TEST()
 
 
-    #:block TEST("mode_invalid_format1")
-      call opts%setMode("rp", ioStat, ioMsg)
-      @:ASSERT(ioStat == -2 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:14) == "Invalid format")
-    #:endblock
+  $:TEST("mode_invalid_format1", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("rp", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -2 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:14) == "Invalid format")
+  $:END_TEST()
 
 
-    #:block TEST("mode_invalid_format2")
-      call opts%setMode("r+p", ioStat, ioMsg)
-      @:ASSERT(ioStat == -2 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:14) == "Invalid format")
-    #:endblock
+  $:TEST("mode_invalid_format2", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("r+p", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -2 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:14) == "Invalid format")
+  $:END_TEST()
 
 
-    #:block TEST("mode_superfluous_chars1")
-      call opts%setMode("rtq", ioStat, ioMsg)
-      @:ASSERT(ioStat == -3 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:22) == "Superfluous characters")
-    #:endblock
+  $:TEST("mode_superfluous_chars1", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("rtq", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -3 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:22) == "Superfluous characters")
+  $:END_TEST()
 
 
-    #:block TEST("mode_superfluous_chars2")
-      call opts%setMode("r+tp", ioStat, ioMsg)
-      @:ASSERT(ioStat == -3 .and. allocated(ioMsg))
-      @:ASSERT(ioMsg(1:22) == "Superfluous characters")
-    #:endblock
-
-  #:endblock TEST_FIXTURE
-
-
-  #:block TEST_FIXTURE("fileDescr")
-
-    integer, parameter :: lineLength = 10
-    character(lineLength), parameter :: dummyContent(*) = &
-        & [character(lineLength) :: "1st line", "2nd line"]
-    type(TFileDescr) :: fd
-    integer :: ioStat
-
-  #:contains
-
-    #:block TEST("close_on_exit")
-      character(*), parameter :: fname = "file_close_on_exit.tmp"
-
-      call deleteFile_(fname)
-      @:ASSERT(.not. fileExists(fname))
-      block
-        type(TFileDescr) :: fd
-        @:ASSERT(.not. connected_(fname))
-        call openFile(fd, fname, mode="w", ioStat=ioStat)
-        @:ASSERT(ioStat == 0 .and. fd%unit /= -1 .and. connected_(fname))
-      end block
-      @:ASSERT(fileExists(fname) .and. .not. connected_(fname))
-    #:endblock
+  $:TEST("mode_superfluous_chars2", label="openOptions")
+    type(TOpenOptionsFx) :: fx
+    call fx%opts%setMode("r+tp", fx%ioStat, fx%ioMsg)
+    @:ASSERT(fx%ioStat == -3 .and. allocated(fx%ioMsg))
+    @:ASSERT(fx%ioMsg(1:22) == "Superfluous characters")
+  $:END_TEST()
 
 
-    #:block TEST("close_on_exit_rank_1")
-      character(31), parameter :: fnames(*) = [&
-        & "file_close_on_exit_rank_1.a.tmp", "file_close_on_exit_rank_1.b.tmp"]
-      integer :: iFile
+  $:TEST("close_on_exit", label="fileDescr")
+    character(*), parameter :: fname = "file_close_on_exit.tmp"
+    type(TFileDescrFx) :: fx
 
-      do iFile = 1, size(fnames)
-        call deleteFile_(fnames(iFile))
-        @:ASSERT(.not. fileExists(fnames(iFile)))
-      end do
-      block
-        type(TFileDescr) :: fds(size(fnames))
-        do iFile = 1, size(fnames)
-          @:ASSERT(.not. connected_(fnames(iFile)))
-          call openFile(fds(iFile), fnames(iFile), mode="w", ioStat=ioStat)
-          @:ASSERT(ioStat == 0)
-        end do
-        do iFile = 1, size(fnames)
-          @:ASSERT(fds(iFile)%unit /= -1 .and. connected_(fnames(iFile)))
-        end do
-      end block
-      do iFile = 1, size(fnames)
-        @:ASSERT(fileExists(fnames(iFile)) .and. .not. connected_(fnames(iFile)))
-      end do
-    #:endblock
+    call deleteFile_(fname)
+    @:ASSERT(.not. fileExists(fname))
+    block
+      type(TFileDescr) :: fd
+      @:ASSERT(.not. connected_(fname))
+      call openFile(fd, fname, mode="w", ioStat=fx%ioStat)
+      @:ASSERT(fx%ioStat == 0 .and. fd%unit /= -1 .and. connected_(fname))
+    end block
+    @:ASSERT(fileExists(fname) .and. .not. connected_(fname))
+  $:END_TEST()
 
 
-    #:block TEST("close_on_close")
-      character(*), parameter :: fname = "file_close_on_exit.tmp"
+  $:TEST("close_on_exit_rank_1", label="fileDescr")
+    character(31), parameter :: fnames(*) = [&
+      & "file_close_on_exit_rank_1.a.tmp", "file_close_on_exit_rank_1.b.tmp"]
+      fx%ioStat=fx%ioStat
+    type(TFileDescrFx) :: fx
+    integer :: iFile
 
-      call deleteFile_(fname)
-      @:ASSERT(.not. fileExists(fname) .and. .not. connected_(fname))
-      call openFile(fd, fname, mode="w", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. fd%unit /= -1 .and. connected_(fname))
-      call closeFile(fd)
-      @:ASSERT(fileExists(fname) .and. .not. connected_(fname))
-    #:endblock
-
-
-    #:block TEST("close_on_close_rank_1")
-      character(32), parameter :: fnames(*) = [&
-        & "file_close_on_exit_rank_1.a.tmp", "file_close_on_exit_rank_1.b.tmp"]
+    do iFile = 1, size(fnames)
+      call deleteFile_(fnames(iFile))
+      @:ASSERT(.not. fileExists(fnames(iFile)))
+    end do
+    block
       type(TFileDescr) :: fds(size(fnames))
-      integer :: iFile
-
-      do iFile = 1, size(fnames)
-        call deleteFile_(fnames(iFile))
-        @:ASSERT(.not. fileExists(fnames(iFile)))
-      end do
       do iFile = 1, size(fnames)
         @:ASSERT(.not. connected_(fnames(iFile)))
-        call openFile(fds(iFile), fnames(iFile), mode="w", ioStat=ioStat)
-        @:ASSERT(ioStat == 0)
+        call openFile(fds(iFile), fnames(iFile), mode="w", ioStat=fx%ioStat)
+        @:ASSERT(fx%ioStat == 0)
       end do
       do iFile = 1, size(fnames)
         @:ASSERT(fds(iFile)%unit /= -1 .and. connected_(fnames(iFile)))
       end do
-      call closeFile(fds)
-      do iFile = 1, size(fnames)
-        @:ASSERT(fileExists(fnames(iFile)) .and. .not. connected_(fnames(iFile)))
-      end do
-    #:endblock
+    end block
+    do iFile = 1, size(fnames)
+      @:ASSERT(fileExists(fnames(iFile)) .and. .not. connected_(fnames(iFile)))
+    end do
+  $:END_TEST()
 
 
-    #:block TEST("open_r")
-      character(*), parameter :: fname = "file_open_r.tmp"
+  $:TEST("close_on_close", label="fileDescr")
+    character(*), parameter :: fname = "file_close_on_exit.tmp"
+    type(TFileDescrFx) :: fx
 
-      call createTextFile_(fname, dummyContent)
-      @:ASSERT(fileExists(fname))
-      call openFile(fd, fname, mode="r", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="read", form="formatted", position="rewind"))
-    #:endblock
-
-
-    #:block TEST("open_rb")
-      character(*), parameter :: fname = "file_open_rb.tmp"
-
-      call createTextFile_(fname, dummyContent)
-      @:ASSERT(fileExists(fname))
-      call openFile(fd, fname, mode="rb", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="read", form="unformatted", position="rewind"))
-    #:endblock
+    call deleteFile_(fname)
+    @:ASSERT(.not. fileExists(fname) .and. .not. connected_(fname))
+    call openFile(fx%fd, fname, mode="w", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. fx%fd%unit /= -1 .and. connected_(fname))
+    call closeFile(fx%fd)
+    @:ASSERT(fileExists(fname) .and. .not. connected_(fname))
+  $:END_TEST()
 
 
-    #:block TEST("open_rp")
-      character(*), parameter :: fname = "file_open_rp.tmp"
+  $:TEST("close_on_close_rank_1", label="fileDescr")
+    character(32), parameter :: fnames(*) = [&
+      & "file_close_on_exit_rank_1.a.tmp", "file_close_on_exit_rank_1.b.tmp"]
+    type(TFileDescrFx) :: fx
+    type(TFileDescr) :: fds(size(fnames))
+    integer :: iFile
 
-      call createTextFile_(fname, dummyContent)
-      @:ASSERT(fileExists(fname))
-      call openFile(fd, fname, mode="r+")
-      @:ASSERT(connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="readwrite", form="formatted",&
-          & position="rewind"))
-    #:endblock
-
-
-    #:block TEST("open_w")
-      character(*), parameter :: fname = "file_open_w.tmp"
-
-      call openFile(fd, fname, mode="w", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="write", form="formatted", position="rewind"))
-    #:endblock
-
-
-    #:block TEST("open_wb")
-      character(*), parameter :: fname = "file_open_wb.tmp"
-
-      call openFile(fd, fname, mode="wb", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="write", form="unformatted", position="rewind"))
-    #:endblock
+    do iFile = 1, size(fnames)
+      call deleteFile_(fnames(iFile))
+      @:ASSERT(.not. fileExists(fnames(iFile)))
+    end do
+    do iFile = 1, size(fnames)
+      @:ASSERT(.not. connected_(fnames(iFile)))
+      call openFile(fds(iFile), fnames(iFile), mode="w", ioStat=fx%ioStat)
+      @:ASSERT(fx%ioStat == 0)
+    end do
+    do iFile = 1, size(fnames)
+      @:ASSERT(fds(iFile)%unit /= -1 .and. connected_(fnames(iFile)))
+    end do
+    call closeFile(fds)
+    do iFile = 1, size(fnames)
+      @:ASSERT(fileExists(fnames(iFile)) .and. .not. connected_(fnames(iFile)))
+    end do
+  $:END_TEST()
 
 
-    #:block TEST("open_wp")
-      character(*), parameter :: fname = "file_open_wp.tmp"
+  $:TEST("open_r", label="fileDescr")
+    character(*), parameter :: fname = "file_open_r.tmp"
+    type(TFileDescrFx) :: fx
 
-      call openFile(fd, fname, mode="w+")
-      @:ASSERT(connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="readwrite", form="formatted",&
-          & position="rewind"))
-    #:endblock
-
-
-    #:block TEST("open_a_new")
-      character(*), parameter :: fname = "file_open_a_existing.tmp"
-
-      call deleteFile_(fname)
-      call openFile(fd, fname, mode="a", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="write", form="formatted", position="append"))
-    #:endblock
+    call createTextFile_(fname, fx%dummyContent)
+    @:ASSERT(fileExists(fname))
+    call openFile(fx%fd, fname, mode="r", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="read", form="formatted", position="rewind"))
+  $:END_TEST()
 
 
-    #:block TEST("open_a_existing")
-      character(*), parameter :: fname = "file_open_a_existing.tmp"
+  $:TEST("open_rb", label="fileDescr")
+    character(*), parameter :: fname = "file_open_rb.tmp"
+    type(TFileDescrFx) :: fx
 
-      call clearFile(fname)
-      call openFile(fd, fname, mode="a", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="write", form="formatted", position="append"))
-    #:endblock
-
-
-    #:block TEST("open_ab")
-      character(*), parameter :: fname = "file_open_ab.tmp"
-
-      call openFile(fd, fname, mode="ab", ioStat=ioStat)
-      @:ASSERT(ioStat == 0 .and. connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="write", form="unformatted", position="append"))
-    #:endblock
+    call createTextFile_(fname, fx%dummyContent)
+    @:ASSERT(fileExists(fname))
+    call openFile(fx%fd, fname, mode="rb", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="read", form="unformatted", position="rewind"))
+  $:END_TEST()
 
 
-    #:block TEST("open_ap")
-      character(*), parameter :: fname = "file_open_ap.tmp"
+  $:TEST("open_rp", label="fileDescr")
+    character(*), parameter :: fname = "file_open_rp.tmp"
+    type(TFileDescrFx) :: fx
 
-      call openFile(fd, fname, mode="a+")
-      @:ASSERT(connected_(fname))
-      @:ASSERT(checkUnitProperties_(fd%unit, action="readwrite", form="formatted",&
-          & position="append"))
-    #:endblock
-
-
-    #:block TEST("open_r_fail")
-      character(*), parameter :: fname = "file_open_r_fail.tmp"
-
-      @:ASSERT(.not. fileExists(fname))
-      call openFile(fd, fname, mode="r", ioStat=ioStat)
-      @:ASSERT((ioStat > 0 .and. fd%unit == -1 .and. .not. connected_(fname)))
-
-    #:endblock
-
-  #:endblock TEST_FIXTURE
+    call createTextFile_(fname, fx%dummyContent)
+    @:ASSERT(fileExists(fname))
+    call openFile(fx%fd, fname, mode="r+")
+    @:ASSERT(connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="readwrite", form="formatted",&
+        & position="rewind"))
+  $:END_TEST()
 
 
-  #:block TEST_FIXTURE("clearFile")
+  $:TEST("open_w", label="fileDescr")
+    character(*), parameter :: fname = "file_open_w.tmp"
+    type(TFileDescrFx) :: fx
 
-  #:contains
-
-    #:block TEST("non_existing")
-      character(*), parameter :: fname = "file_non_existing.tmp"
-
-      call deleteFile_(fname)
-      @:ASSERT(.not. fileExists(fname))
-      call clearFile(fname)
-      @:ASSERT(fileExists(fname) .and. fileSize_(fname) == 0)
-
-    #:endblock
+    call openFile(fx%fd, fname, mode="w", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="write", form="formatted", position="rewind"))
+  $:END_TEST()
 
 
-    #:block TEST("existing")
-      character(*), parameter :: fname = "file_existing.tmp"
-      character(1), parameter :: dummyContent(*) = ["a", "b"]
+  $:TEST("open_wb", label="fileDescr")
+    character(*), parameter :: fname = "file_open_wb.tmp"
+    type(TFileDescrFx) :: fx
 
-      call createTextFile_(fname, dummyContent)
-      @:ASSERT(fileExists(fname) .and. fileSize_(fname) > 0)
-      call clearFile(fname)
-      @:ASSERT(fileExists(fname) .and. fileSize_(fname) == 0)
-
-    #:endblock
-
-  #:endblock
+    call openFile(fx%fd, fname, mode="wb", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="write", form="unformatted", position="rewind"))
+  $:END_TEST()
 
 
-  #:block TEST_FIXTURE("fileAccess")
+  $:TEST("open_wp", label="fileDescr")
+    character(*), parameter :: fname = "file_open_wp.tmp"
+    type(TFileDescrFx) :: fx
 
-    type(TFileDescr) :: fd
-    type(TOpenOptions) :: opts
-    integer :: ioStat
-
-  #:contains
-
-    #:block TEST("default_text_access")
-      character(*), parameter :: fname = "default_text_access"
-
-      ! Note: openFile() closes the file connected to the descriptor (if any)
-      call openFile(fd, fname, mode="w", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=defaultTextAccess(2)))
-      call openFile(fd, fname, mode="r", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=defaultTextAccess(1)))
-      call openFile(fd, fname, mode="r+", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=defaultTextAccess(3)))
-    #:endblock
+    call openFile(fx%fd, fname, mode="w+")
+    @:ASSERT(connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="readwrite", form="formatted",&
+        & position="rewind"))
+  $:END_TEST()
 
 
-    #:block TEST("default_binary_access")
-      character(*), parameter :: fname = "default_binary_access"
+  $:TEST("open_a_new", label="fileDescr")
+    character(*), parameter :: fname = "file_open_a_existing.tmp"
+    type(TFileDescrFx) :: fx
 
-      ! Note: openFile() closes the file connected to the descriptor (if any)
-      call openFile(fd, fname, mode="wb", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=defaultBinaryAccess(2)))
-      call openFile(fd, fname, mode="rb", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=defaultBinaryAccess(1)))
-      call openFile(fd, fname, mode="r+b", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=defaultBinaryAccess(3)))
-    #:endblock
+    call deleteFile_(fname)
+    call openFile(fx%fd, fname, mode="a", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="write", form="formatted", position="append"))
+  $:END_TEST()
 
 
-    #:block TEST("stream_access")
-      character(*), parameter :: fname = "stream_access"
-      character(*), parameter :: access = "stream"
+  $:TEST("open_a_existing", label="fileDescr")
+    character(*), parameter :: fname = "file_open_a_existing.tmp"
+    type(TFileDescrFx) :: fx
 
-      ! Note: openFile() closes the file connected to the descriptor (if any)
-      opts%access = access
-      call openFile(fd, fname, options=opts, mode="w", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=access))
-      call openFile(fd, fname, options=opts, mode="r", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=access))
-      call openFile(fd, fname, options=opts, mode="r+", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=access))
-    #:endblock
+    call clearFile(fname)
+    call openFile(fx%fd, fname, mode="a", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="write", form="formatted", position="append"))
+  $:END_TEST()
 
 
-    #:block TEST("sequential_access")
-      character(*), parameter :: fname = "sequential_access"
-      character(*), parameter :: access = "sequential"
+  $:TEST("open_ab", label="fileDescr")
+    character(*), parameter :: fname = "file_open_ab.tmp"
+    type(TFileDescrFx) :: fx
 
-      ! Note: openFile() closes the file connected to the descriptor (if any)
-      opts%access = access
-      call openFile(fd, fname, options=opts, mode="w", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=access))
-      call openFile(fd, fname, options=opts, mode="r", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=access))
-      call openFile(fd, fname, options=opts, mode="r+", ioStat=ioStat)
-      @:ASSERT(ioStat == 0)
-      @:ASSERT(checkUnitProperties_(fd%unit, access=access))
-    #:endblock
+    call openFile(fx%fd, fname, mode="ab", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0 .and. connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="write", form="unformatted",&
+        & position="append"))
+  $:END_TEST()
 
-  #:endblock
+
+  $:TEST("open_ap", label="fileDescr")
+    character(*), parameter :: fname = "file_open_ap.tmp"
+    type(TFileDescrFx) :: fx
+
+    call openFile(fx%fd, fname, mode="a+")
+    @:ASSERT(connected_(fname))
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, action="readwrite", form="formatted",&
+        & position="append"))
+  $:END_TEST()
+
+
+  $:TEST("open_r_fail", label="fileDescr")
+    character(*), parameter :: fname = "file_open_r_fail.tmp"
+    type(TFileDescrFx) :: fx
+
+    @:ASSERT(.not. fileExists(fname))
+    call openFile(fx%fd, fname, mode="r", ioStat=fx%ioStat)
+    @:ASSERT((fx%ioStat > 0 .and. fx%fd%unit == -1 .and. .not. connected_(fname)))
+
+  $:END_TEST()
+
+
+  $:TEST("non_existing", label="clearFile")
+    character(*), parameter :: fname = "file_non_existing.tmp"
+
+    call deleteFile_(fname)
+    @:ASSERT(.not. fileExists(fname))
+    call clearFile(fname)
+    @:ASSERT(fileExists(fname) .and. fileSize_(fname) == 0)
+
+  $:END_TEST()
+
+
+  $:TEST("existing", label="clearFile")
+    character(*), parameter :: fname = "file_existing.tmp"
+    character(1), parameter :: dummyContent(*) = ["a", "b"]
+
+    call createTextFile_(fname, dummyContent)
+    @:ASSERT(fileExists(fname) .and. fileSize_(fname) > 0)
+    call clearFile(fname)
+    @:ASSERT(fileExists(fname) .and. fileSize_(fname) == 0)
+
+  $:END_TEST()
+
+
+  $:TEST("default_text_access", label="fileAccess")
+    character(*), parameter :: fname = "default_text_access"
+    type(TFileAccessFx) :: fx
+
+    ! Note: openFile() closes the file connected to the descriptor (if any)
+    call openFile(fx%fd, fname, mode="w", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=defaultTextAccess(2)))
+    call openFile(fx%fd, fname, mode="r", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=defaultTextAccess(1)))
+    call openFile(fx%fd, fname, mode="r+", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=defaultTextAccess(3)))
+  $:END_TEST()
+
+
+  $:TEST("default_binary_access", label="fileAccess")
+    character(*), parameter :: fname = "default_binary_access"
+    type(TFileAccessFx) :: fx
+
+    ! Note: openFile() closes the file connected to the descriptor (if any)
+    call openFile(fx%fd, fname, mode="wb", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fd%unit, access=defaultBinaryAccess(2)))
+    call openFile(fx%fd, fname, mode="rb", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fd%unit, access=defaultBinaryAccess(1)))
+    call openFile(fx%fd, fname, mode="r+b", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=defaultBinaryAccess(3)))
+  $:END_TEST()
+
+
+  $:TEST("stream_access", label="fileAccess")
+    character(*), parameter :: fname = "stream_access"
+    character(*), parameter :: access = "stream"
+    type(TFileAccessFx) :: fx
+
+    ! Note: openFile() closes the file connected to the descriptor (if any)
+    fx%opts%access = access
+    call openFile(fx%fd, fname, options=fx%opts, mode="w", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=access))
+    call openFile(fx%fd, fname, options=fx%opts, mode="r", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=access))
+    call openFile(fx%fd, fname, options=fx%opts, mode="r+", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=access))
+  $:END_TEST()
+
+
+  $:TEST("sequential_access", label="fileAccess")
+    character(*), parameter :: fname = "sequential_access"
+    character(*), parameter :: access = "sequential"
+    type(TFileAccessFx) :: fx
+
+    ! Note: openFile() closes the file connected to the descriptor (if any)
+    fx%opts%access = access
+    call openFile(fx%fd, fname, options=fx%opts, mode="w", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=access))
+    call openFile(fx%fd, fname, options=fx%opts, mode="r", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=access))
+    call openFile(fx%fd, fname, options=fx%opts, mode="r+", ioStat=fx%ioStat)
+    @:ASSERT(fx%ioStat == 0)
+    @:ASSERT(checkUnitProperties_(fx%fd%unit, access=access))
+  $:END_TEST()
+
+
+  function get_tests() result(testitems)
+    type(test_item), allocatable :: testitems(:)
+
+    testitems = [&
+        suite("file", [&
+            suite("openOptions", [&
+                $:TESTS(label="openOptions")
+            ]),&
+            suite("fileDescr", [&
+                $:TESTS(label="fileDescr")
+            ]),&
+            suite("clearFile", [&
+                $:TESTS(label="clearFile")
+            ]),&
+            suite("fileAccess", [&
+                $:TESTS(label="fileAccess")
+            ])&
+        ])&
+    ]
+
+  end function get_tests
 
 
   ! Compares, whether two options are equal
@@ -638,7 +701,14 @@
 
   end function fileSize_
 
-#:endblock TEST_SUITE
+end module test_common_file
 
 
-@:TEST_DRIVER()
+program testapp_common_file
+  use test_common_file, only : get_tests
+  use fortuno_serial, only : execute_serial_cmd_app
+  implicit none
+
+  call execute_serial_cmd_app(testitems=[get_tests()])
+
+end program testapp_common_file

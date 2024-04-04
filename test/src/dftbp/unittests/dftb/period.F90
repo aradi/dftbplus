@@ -16,6 +16,20 @@
 
 #:contains
 
+  #:block TEST_VARIABLES("distributeAtoms")
+    integer :: startAtom, endAtom
+    logical :: error
+  #:endblock TEST_VARIABLES
+
+
+  $:TEST("singleRank_{i}",&
+      & procargs=["fx"],&
+      & variables="distributeAtoms",&
+      & params={"i": range(0, 10)}&
+      & constrargs=["alma", "i{}"],&
+      &)
+
+
   #:block TEST_FIXTURE("distributeAtoms")
 
     integer :: startAtom, endAtom
