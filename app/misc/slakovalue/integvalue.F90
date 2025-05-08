@@ -10,7 +10,7 @@
 program integvalue
   use dftbp_common_accuracy, only : dp, lc
   use dftbp_common_environment, only : TEnvironment, TEnvironment_init
-  use dftbp_common_globalenv, only : destructGlobalEnv, initGlobalEnv, stdOut
+  use dftbp_common_globalenv, only : destructGlobalEnv, initGlobalEnv
   use dftbp_dftb_slakoeqgrid, only : getCutoff, getSKIntegrals, init, skEqGridNew, TSlakoEqGrid
   use dftbp_io_message, only : error
   use dftbp_type_oldskdata, only : readFromFile, TOldSKData
@@ -33,8 +33,6 @@ program integvalue
 
   call initGlobalEnv()
   call TEnvironment_init(env)
-  ! temporary fix
-  env%stdOut = stdOut
 
   call processArguments(env, fname, homo, extended, col)
   call readFromFile(skdata, fname, homo)

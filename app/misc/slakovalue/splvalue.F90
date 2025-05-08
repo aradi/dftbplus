@@ -12,7 +12,7 @@
 program splvalue
   use dftbp_common_environment, only : TEnvironment, TEnvironment_init
   use dftbp_common_accuracy, only : dp, lc
-  use dftbp_common_globalenv, only : initGlobalEnv, destructGlobalEnv, stdOut
+  use dftbp_common_globalenv, only : initGlobalEnv, destructGlobalEnv
   use dftbp_common_file, only : TFileDescr, closeFile, openFile
   use dftbp_dftb_repulsive_splinerep, only : TSplineRepInp, TSplineRep, TSplineRep_init
   use dftbp_io_message, only : error
@@ -34,8 +34,6 @@ program splvalue
 
   call initGlobalEnv()
   call TEnvironment_init(env)
-  ! temporary fix
-  env%stdOut = stdOut
 
 #:if WITH_MPI
   ! As this is serial code, trap for run time execution on more than 1 processor with an mpi enabled

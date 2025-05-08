@@ -13,7 +13,7 @@ program skderivs
   use dftbp_common_constants, only : maxL, shellNames
   use dftbp_common_environment, only : TEnvironment, TEnvironment_init
   use dftbp_common_file, only : closeFile, openFile, TFileDescr
-  use dftbp_common_globalenv, only : destructGlobalEnv, initGlobalEnv, stdOut
+  use dftbp_common_globalenv, only : destructGlobalEnv, initGlobalEnv
   use dftbp_dftb_slakoeqgrid, only : getNIntegrals, getSKIntegrals, init, skEqGridNew, skEqGridOld,&
       & TSlakoEqGrid
   use dftbp_io_charmanip, only : i2c, unquote
@@ -47,8 +47,6 @@ implicit none
 
   call initGlobalEnv()
   call TEnvironment_init(env)
-  ! temporary fix
-  env%stdOut = stdOut
 
 #:if WITH_MPI
   ! As this is serial code, trap for run time execution on more than 1 processor with an mpi enabled

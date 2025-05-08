@@ -26,7 +26,8 @@ module dftbp_common_globalenv
   private
   public :: initGlobalEnv, destructGlobalEnv
   public :: abortProgram, shutdown, synchronizeAll
-  public :: stdOut, stdOut0, stdErr, stdErr0, tIoProc
+  public :: stdOut0, stdErr0
+  public :: tIoProc
   public :: withScalapack, withMpi
   public :: instanceSafeBuild
   #:if WITH_MPI
@@ -39,12 +40,6 @@ module dftbp_common_globalenv
 
   !> Unredirected standard error
   integer, parameter :: stdErr0 = error_unit
-
-  !> Standard out file handler
-  integer, protected :: stdOut = stdOut0
-
-  !> Standard error file handler
-  integer, protected :: stdErr = stdErr0
 
   !> Whether current process is the global lead process
   logical, protected :: tIoProc = .true.
@@ -90,12 +85,10 @@ contains
     !> Unit of the null device (needed for follow processes to suppress their output)
     integer, intent(in), optional :: devNull
 
-
+  #:if WITH_MPI
     integer :: outputUnit0, errorUnit0, devNull0
 
-  #:if WITH_MPI
     integer :: mpiComm0
-  #:endif
 
     if (present(outputUnit)) then
       outputUnit0 = outputUnit
@@ -109,7 +102,6 @@ contains
       errorUnit0 = stdErr0
     end if
 
-  #:if WITH_MPI
     if (present(mpiComm)) then
       mpiComm0 = mpiComm
       doMpiFinalization = .false.
@@ -132,9 +124,6 @@ contains
       stdErr = devNull0
     end if
     tIoProc = globalMpiComm%lead
-  #:else
-    stdOut = outputUnit0
-    stdErr = errorUnit0
   #:endif
 
   end subroutine initGlobalEnv

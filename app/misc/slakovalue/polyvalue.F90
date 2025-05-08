@@ -10,7 +10,7 @@
 program polyvalue
   use dftbp_common_environment, only : TEnvironment, TEnvironment_init
   use dftbp_common_accuracy, only : dp, lc
-  use dftbp_common_globalenv, only : initGlobalEnv, destructGlobalEnv, stdOut
+  use dftbp_common_globalenv, only : initGlobalEnv, destructGlobalEnv
   use dftbp_common_file, only : TFileDescr, closeFile, openFile
   use dftbp_dftb_repulsive_polyrep, only : TPolyRepInp, TPolyRep, TPolyRep_init
   use dftbp_io_message, only : error
@@ -28,8 +28,6 @@ program polyvalue
 
   call initGlobalEnv()
   call TEnvironment_init(env)
-  ! temporary fix
-  env%stdOut = stdOut
 
   if (command_argument_count() == 0) then
     call error("Wrong number of arguments. Use 'polyvalue -h' to obtain help.")

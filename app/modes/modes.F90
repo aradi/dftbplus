@@ -13,7 +13,7 @@ program modes
   use dftbp_common_accuracy, only : dp, lc
   use dftbp_common_constants, only : Hartree__cm, pi
   use dftbp_common_file, only : TFileDescr, closeFile, openFile
-  use dftbp_common_globalenv, only : initGlobalEnv, destructGlobalEnv, stdOut
+  use dftbp_common_globalenv, only : initGlobalEnv, destructGlobalEnv
   use dftbp_io_formatout, only : writeXYZFormat
   use dftbp_io_message, only : error
   use dftbp_io_taggedoutput, only : TTaggedWriter, TTaggedWriter_init
@@ -52,8 +52,6 @@ program modes
 
   call initGlobalEnv()
   call TEnvironment_init(env)
-  ! temporary fix
-  env%stdOut = stdOut
 
 #:if WITH_MPI
   ! As this is serial code, trap for run time execution on more than 1 processor with an mpi enabled

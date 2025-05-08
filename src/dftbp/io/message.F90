@@ -10,7 +10,7 @@
 !> Provides routines to call with a string or array of strings if problems occur of a fatal (error)
 !> or recoverable (warning) nature.
 module dftbp_io_message
-  use dftbp_common_globalenv, only : stdOut, synchronizeAll, abortProgram
+  use dftbp_common_globalenv, only : stdOut0, synchronizeAll, abortProgram
   implicit none
 
   private
@@ -38,6 +38,7 @@ module dftbp_io_message
 
 
   public :: warning, error, cleanShutdown
+
 
 contains
 
@@ -82,9 +83,9 @@ contains
     !> Error message to print to standard out.
     character (len=*), intent(in) :: message
 
-    write(stdOut, '(1a)') 'ERROR!'
-    write(stdOut, '(2a)') '-> ', trim(message)
-    flush(stdOut)
+    write(stdOut0, '(1a)') 'ERROR!'
+    write(stdOut0, '(2a)') '-> ', trim(message)
+    flush(stdOut0)
     call abortProgram()
 
   end subroutine error_single
@@ -98,11 +99,11 @@ contains
 
     integer :: ii
 
-    write(stdOut, '(1a)') 'ERROR!'
+    write(stdOut0, '(1a)') 'ERROR!'
     do ii = 1, size(messages)
-      write(stdOut, '(2a)') '-> ', trim(messages(ii))
+      write(stdOut0, '(2a)') '-> ', trim(messages(ii))
     end do
-    flush(stdOut)
+    flush(stdOut0)
     call abortProgram()
 
   end subroutine error_array
